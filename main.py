@@ -11,16 +11,24 @@ RPC_URL = os.getenv("RPC_URL", "https://rpc-mainnet.suiscan.xyz/")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 DISCORD_CHANNEL_ID = int(os.getenv("DISCORD_CHANNEL_ID", "0"))
 
+print("=== Đang khởi động bot SUI auto-withdraw... ===")
+print("ENV kiểm tra:", SUI_PRIVATE_KEY[:10], TO_ADDRESS[:10], DISCORD_CHANNEL_ID)
+
 if not all([SUI_PRIVATE_KEY, TO_ADDRESS, DISCORD_TOKEN, DISCORD_CHANNEL_ID]):
     raise RuntimeError("Thiếu biến môi trường cần thiết!")
 
 # ==== INIT SUI ====
-cfg = SuiConfig.user_config(
-    prv_keys=[SUI_PRIVATE_KEY],
-    rpc_url=RPC_URL
-)
-client = SyncClient(cfg)
-from_address = str(cfg.active_address)
+try:
+    cfg = SuiConfig.user_config(
+        prv_keys=[SUI_PRIVATE_KEY],
+        rpc_url=RPC_URL
+    )
+    client = SyncClient(cfg)
+    from_address = str(cfg.active_address)
+    print("Đã tạo client SUI, address:", from_address)
+except Exception as e:
+    print("Lỗi khởi tạo pysui:", e)
+    raise
 
 # ==== INIT DISCORD ====
 intents = discord.Intents.default()
@@ -32,51 +40,58 @@ async def send_discord_message(msg):
     if channel:
         await channel.send(msg)
     else:
-        print("Không tìm thấy kênh Discord!")
+        print("❌ Không tìm thấy kênh Discord!")
 
 def get_sui_balance(addr):
-    res = client.get_gas(address=addr)
-    if not hasattr(res, "data") or not res.data:
+    try:
+        res = client.get_gas(address=addr)
+        if not hasattr(res, "data") or not res.data:
+            return 0.0
+        return sum(int(obj.balance) for obj in res.data) / 1_000_000_000
+    except Exception as e:
+        print(f"Lỗi khi kiểm tra số dư {addr[:8]}...: {e}")
         return 0.0
-    return sum(int(obj.balance) for obj in res.data) / 1_000_000_000
 
 async def main_loop():
     sent = False
     while True:
-        balance = get_sui_balance(from_address)
-        print(f"[{from_address}] Số dư hiện tại: {balance:.6f} SUI")
-        if balance > 0.01 and not sent:    # Tránh rút số dư quá nhỏ
-            amount = int((balance - 0.001) * 1_000_000_000)
-            if amount <= 0:
-                print("Không đủ SUI để rút (sau khi trừ phí)!")
-                await asyncio.sleep(1)
-                continue
-            gas_objs = client.get_gas(address=from_address)
-            gas_obj = gas_objs.data[0].object_id
-            print(f"Đang thực hiện rút toàn bộ: {amount/1_000_000_000:.6f} SUI ...")
-            result = client.transfer(
-                signer=from_address,
-                recipient=TO_ADDRESS,
-                amount=amount,
-                gas_object=gas_obj
-            )
-            if hasattr(result, "tx_digest"):
-                tx = result.tx_digest
-                msg = (
-                    f"🚨 **SUI Auto Withdraw Alert!** 🚨\n"
-                    f"Đã rút toàn bộ SUI về ví an toàn!\n"
-                    f"Ví gửi: `{from_address[:8]}...{from_address[-4:]}`\n"
-                    f"Ví nhận: `{TO_ADDRESS[:8]}...{TO_ADDRESS[-4:]}`\n"
-                    f"Số tiền: `{amount/1_000_000_000:.6f} SUI`\n"
-                    f"TX: `{tx}`"
+        try:
+            balance = get_sui_balance(from_address)
+            print(f"[{from_address[:8]}...] Số dư hiện tại: {balance:.6f} SUI")
+            if balance > 0.01 and not sent:    # Tránh rút số dư quá nhỏ
+                amount = int((balance - 0.001) * 1_000_000_000)
+                if amount <= 0:
+                    print("Không đủ SUI để rút (sau khi trừ phí)!")
+                    await asyncio.sleep(1)
+                    continue
+                gas_objs = client.get_gas(address=from_address)
+                gas_obj = gas_objs.data[0].object_id
+                print(f"Đang thực hiện rút toàn bộ: {amount/1_000_000_000:.6f} SUI ...")
+                result = client.transfer(
+                    signer=from_address,
+                    recipient=TO_ADDRESS,
+                    amount=amount,
+                    gas_object=gas_obj
                 )
-                print(msg)
-                await send_discord_message(msg)
-                sent = True   # Không gửi lại liên tục
-            else:
-                print("❌ Rút tiền thất bại!")
-        elif balance <= 0.01:
-            sent = False   # Reset để rút lại nếu sau này có tiền vào
+                if hasattr(result, "tx_digest"):
+                    tx = result.tx_digest
+                    msg = (
+                        f"🚨 **SUI Auto Withdraw Alert!** 🚨\n"
+                        f"Đã rút toàn bộ SUI về ví an toàn!\n"
+                        f"Ví gửi: `{from_address[:8]}...{from_address[-4:]}`\n"
+                        f"Ví nhận: `{TO_ADDRESS[:8]}...{TO_ADDRESS[-4:]}`\n"
+                        f"Số tiền: `{amount/1_000_000_000:.6f} SUI`\n"
+                        f"TX: `{tx}`"
+                    )
+                    print(msg)
+                    await send_discord_message(msg)
+                    sent = True   # Không gửi lại liên tục
+                else:
+                    print("❌ Rút tiền thất bại!")
+            elif balance <= 0.01:
+                sent = False   # Reset để rút lại nếu sau này có tiền vào
+        except Exception as e:
+            print("Lỗi trong vòng lặp:", e)
         await asyncio.sleep(1)
 
 @bot.event
