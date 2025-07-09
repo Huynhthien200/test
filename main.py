@@ -84,4 +84,5 @@ async def on_ready():
     print("Bot Discord đã sẵn sàng!")
     bot.loop.create_task(main_loop())
 
-if __name__ == "__main__
+if __name__ == "__main__":
+    bot.run(DISCORD_TOKEN)
