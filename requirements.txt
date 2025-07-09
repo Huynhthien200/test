@@ -1,2 +1,2 @@
-git+https://github.com/Metadream/sui-pysui.git@v0.54.0
+-e git+https://github.com/Metadream/sui-pysui.git@v0.54.0#egg=pysui
 bech32==1.2.0
