@@ -1,6 +1,7 @@
 import os
 import time
 import asyncio
+import requests
 from pysui import SuiConfig, SyncClient
 import discord
 
@@ -42,29 +43,39 @@ async def send_discord_message(msg):
     else:
         print("❌ Không tìm thấy kênh Discord!")
 
-def get_sui_balance(addr):
+def get_sui_balance_via_rpc(addr):
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "suix_getBalance",
+        "params": [addr, "0x2::sui::SUI"]
+    }
     try:
-        res = client.get_gas(address=addr)
-        if not hasattr(res, "data") or not res.data:
-            return 0.0
-        return sum(int(obj.balance) for obj in res.data) / 1_000_000_000
+        res = requests.post(RPC_URL, json=payload, timeout=10).json()
+        if "result" in res and "totalBalance" in res["result"]:
+            return int(res["result"]["totalBalance"]) / 1_000_000_000
     except Exception as e:
         print(f"Lỗi khi kiểm tra số dư {addr[:8]}...: {e}")
-        return 0.0
+    return 0.0
 
 async def main_loop():
     sent = False
     while True:
         try:
-            balance = get_sui_balance(from_address)
-            print(f"[{from_address[:8]}...] Số dư hiện tại: {balance:.6f} SUI")
+            balance = get_sui_balance_via_rpc(from_address)
+            print(f"[{from_address[:8]}...] Số dư hiện tại (RPC): {balance:.6f} SUI")
             if balance > 0.01 and not sent:    # Tránh rút số dư quá nhỏ
                 amount = int((balance - 0.001) * 1_000_000_000)
                 if amount <= 0:
                     print("Không đủ SUI để rút (sau khi trừ phí)!")
                     await asyncio.sleep(1)
                     continue
+                # Lấy gas object qua pysui
                 gas_objs = client.get_gas(address=from_address)
+                if not hasattr(gas_objs, "data") or not gas_objs.data:
+                    print("Không tìm thấy gas object cho ví này!")
+                    await asyncio.sleep(1)
+                    continue
                 gas_obj = gas_objs.data[0].object_id
                 print(f"Đang thực hiện rút toàn bộ: {amount/1_000_000_000:.6f} SUI ...")
                 result = client.transfer(
