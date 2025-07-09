@@ -4,17 +4,24 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-# Thêm đầy đủ công cụ build C (build-essential, gcc, libffi-dev, git, v.v.)
 RUN apt-get update && apt-get install -y \
     git \
     build-essential \
     gcc \
     libffi-dev \
     libssl-dev \
-    python3-dev
+    python3-dev \
+    pkg-config \
+    libpq-dev \
+    libgmp-dev \
+    libsecp256k1-dev \
+    make \
+    cmake
 
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip setuptools wheel
+
 RUN pip install git+https://github.com/Metadream/sui-pysui.git@v0.54.0
+
 RUN pip install -r requirements.txt
 
 COPY . .
