@@ -70,12 +70,15 @@ async def main_loop():
                     print("Không đủ SUI để rút (sau khi trừ phí)!")
                     await asyncio.sleep(1)
                     continue
-                # Lấy gas object qua pysui
+                # Lấy gas object qua pysui (DEBUG)
                 gas_objs = client.get_gas(address=from_address)
+                print("DEBUG gas_objs:", gas_objs)
                 if not hasattr(gas_objs, "data") or not gas_objs.data:
                     print("Không tìm thấy gas object cho ví này!")
                     await asyncio.sleep(1)
                     continue
+                for idx, obj in enumerate(gas_objs.data):
+                    print(f"Object {idx}: id={obj.object_id}, balance={int(obj.balance)/1_000_000_000} SUI")
                 gas_obj = gas_objs.data[0].object_id
                 print(f"Đang thực hiện rút toàn bộ: {amount/1_000_000_000:.6f} SUI ...")
                 result = client.transfer(
