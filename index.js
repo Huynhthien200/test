@@ -1,7 +1,7 @@
-require('dotenv').config();
-const { Ed25519Keypair, fromB64, Connection, JsonRpcProvider, RawSigner, decodeSuiPrivateKey } = require('@mysten/sui.js');
-const bs58 = require('bs58');
-const { Client, GatewayIntentBits } = require('discord.js');
+import 'dotenv/config';
+import { Ed25519Keypair, fromB64, Connection, JsonRpcProvider, RawSigner, decodeSuiPrivateKey } from '@mysten/sui.js';
+import bs58 from 'bs58';
+import { Client, GatewayIntentBits } from 'discord.js';
 
 const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY;
 const TO_ADDRESS = process.env.SUI_TARGET_ADDRESS;
@@ -14,11 +14,9 @@ const provider = new JsonRpcProvider(new Connection({ fullnode: RPC_URL }));
 
 function privateKeyToKeypair(priv) {
     if (priv.startsWith('suiprivkey1')) {
-        // Convert suiprivkey1... sang base64, rồi Ed25519Keypair
         const decoded = decodeSuiPrivateKey(priv);
         return Ed25519Keypair.fromSecretKey(decoded.secretKey);
     }
-    // Nếu là dạng base64, dùng luôn
     return Ed25519Keypair.fromSecretKey(fromB64(priv));
 }
 const keypair = privateKeyToKeypair(SUI_PRIVATE_KEY);
@@ -32,13 +30,11 @@ async function sendDiscord(msg) {
     if (ch) await ch.send(msg).catch(() => {});
 }
 
-// ====== SWEEP SUI AUTO ======
 async function sweepAllSui() {
     const address = await signer.getAddress();
     let sent = false;
     while (true) {
         try {
-            // 1. Get all coin objects
             const coins = await provider.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
             const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
             const totalSui = Number(total) / 1e9;
@@ -47,12 +43,10 @@ async function sweepAllSui() {
                 console.log(`  Object ${i+1}: id=${c.coinObjectId} balance=${Number(c.balance)/1e9} SUI`);
             });
 
-            // 2. Sweep nếu có SUI
             if (totalSui > 0.01 && coins.data.length > 0 && !sent) {
                 for (let i = 0; i < coins.data.length; i++) {
                     const coin = coins.data[i];
                     let value = BigInt(coin.balance);
-                    // Trừ 0.001 SUI phí cho object đầu (nếu đủ)
                     if (i === 0 && value > 1_000_000n) value -= 1_000_000n;
                     if (value <= 0n) continue;
                     try {
@@ -83,10 +77,9 @@ async function sweepAllSui() {
     }
 }
 
-// ===== DISCORD BOT =====
 discord.once('ready', () => {
     console.log('Bot Discord đã sẵn sàng!');
     sweepAllSui();
 });
 
-discord.login(DISCORD_TOKEN)
+discord.login(DISCORD_TOKEN);
