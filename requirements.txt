@@ -1,4 +1,0 @@
-git+https://github.com/FrankC01/pysui.git
-discord.py
-aiohttp
-requests
