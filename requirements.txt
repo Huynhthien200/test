@@ -1,2 +1,1 @@
-bech32==1.2.0
-pysui==0.86.0
+git+https://github.com/FrankC01/pysui.git
