@@ -1,2 +1,2 @@
-pysui==0.54.0
+git+https://github.com/Metadream/sui-pysui.git@v0.54.0
 bech32==1.2.0
