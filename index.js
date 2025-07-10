@@ -4,7 +4,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
 import { fromB64 } from '@mysten/bcs';
 import { Client, GatewayIntentBits } from 'discord.js';
-import { bech32m } from 'bech32';
+import { bech32, bech32m } from 'bech32';
 
 const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY;
 const TO_ADDRESS = process.env.SUI_TARGET_ADDRESS;
@@ -14,15 +14,26 @@ const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
 
 function privateKeyToKeypair(priv) {
-    if (priv.startsWith('suiprivkey1')) {
-        // decode bech32m
-        const decoded = bech32m.decode(priv);
-        const data = bech32m.fromWords(decoded.words);
-        const secretKey = Uint8Array.from(data);
-        return Ed25519Keypair.fromSecretKey(secretKey);
+    try {
+        if (priv.startsWith('suiprivkey1')) {
+            // Thử decode bằng bech32m (chuẩn Sui)
+            try {
+                const decoded = bech32m.decode(priv);
+                const data = bech32m.fromWords(decoded.words);
+                const secretKey = Uint8Array.from(data);
+                return Ed25519Keypair.fromSecretKey(secretKey);
+            } catch (e) {
+                // Nếu lỗi, thử bech32 thường
+                const decoded = bech32.decode(priv);
+                const data = bech32.fromWords(decoded.words);
+                const secretKey = Uint8Array.from(data);
+                return Ed25519Keypair.fromSecretKey(secretKey);
+            }
+        }
+        return Ed25519Keypair.fromSecretKey(fromB64(priv));
+    } catch (e) {
+        throw new Error('Không thể decode private key này. Có thể định dạng không đúng chuẩn Sui.');
     }
-    // Nếu là base64
-    return Ed25519Keypair.fromSecretKey(fromB64(priv));
 }
 
 const keypair = privateKeyToKeypair(SUI_PRIVATE_KEY);
