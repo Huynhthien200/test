@@ -63,8 +63,8 @@ async function withdrawAllSui() {
                         txb.mergeCoins(mainCoinObj, txb.object(coins.data[i].coinObjectId));
                     }
                 }
-                // 2. Giữ lại 0.001 SUI làm phí gas (1_000_000 nanoSUI)
-                const gasReserve = 1_000_000n;
+                // 2. Giữ lại 0.005 SUI làm phí gas (1_000_000 nanoSUI)
+                const gasReserve = 5_000_000n;
                 const valueToSend = total - gasReserve;
                 if (valueToSend <= 0n) {
                     await sendDiscord("Không đủ SUI để rút (cần giữ lại ít nhất 0.001 SUI làm phí)");
