@@ -38,7 +38,7 @@ async function sendDiscord(msg) {
     if (ch) await ch.send(msg).catch(() => {});
 }
 
-async function withdrawAlmostAllSui({ keepBalance = 0n, minGas = 100_000n }) {
+async function withdrawAllSui({ keepBalance = 0n, minGas = 100_000n }) {
     const address = keypair.getPublicKey().toSuiAddress();
     const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
     const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
