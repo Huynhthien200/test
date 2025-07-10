@@ -1,11 +1,50 @@
 import 'dotenv/config';
+import { existsSync, readdirSync } from 'fs';
 import { Ed25519Keypair, fromB64, decodeSuiPrivateKey } from '@mysten/sui.js/keypairs/ed25519';
 import { JsonRpcProvider, Connection, RawSigner } from '@mysten/sui.js/providers';
 import { Client, GatewayIntentBits } from 'discord.js';
-import suiPkg from '@mysten/sui.js/package.json' assert { type: "json" };
 
-// Log version
-console.log('SUI.JS VERSION:', suiPkg.version);
+// Kiểm tra phiên bản các package
+async function logVersions() {
+    let suiVersion = null, discordVersion = null, dotenvVersion = null;
+    try {
+        suiVersion = (await import('@mysten/sui.js/package.json', { assert: { type: "json" } })).default.version;
+        discordVersion = (await import('discord.js/package.json', { assert: { type: "json" } })).default.version;
+        dotenvVersion = (await import('dotenv/package.json', { assert: { type: "json" } })).default.version;
+    } catch (e) {
+        console.error('Không đọc được version package:', e);
+    }
+    // Kiểm tra node_modules, package-lock.json, package.json
+    const nodeModulesExists = existsSync('./node_modules');
+    const lockExists = existsSync('./package-lock.json');
+    const pkgExists = existsSync('./package.json');
+    let nodeModules = [];
+    if (nodeModulesExists) {
+        try {
+            nodeModules = readdirSync('./node_modules');
+        } catch { nodeModules = []; }
+    }
+    const log =
+        `\n========= LOG KHỞI ĐỘNG =========\n` +
+        `SUI.JS version:      ${suiVersion}\n` +
+        `discord.js version:  ${discordVersion}\n` +
+        `dotenv version:      ${dotenvVersion}\n` +
+        `node_modules/:       ${nodeModulesExists}\n` +
+        `package-lock.json:   ${lockExists}\n` +
+        `package.json:        ${pkgExists}\n` +
+        `Node version:        ${process.version}\n` +
+        (nodeModulesExists ? `Các thư mục trong node_modules/: ${nodeModules.join(', ')}` : '') +
+        `\n========= ENV =========\n` +
+        `SUI_PRIVATE_KEY:     ${process.env.SUI_PRIVATE_KEY ? process.env.SUI_PRIVATE_KEY.slice(0,12)+'...' : 'Not set'}\n` +
+        `SUI_TARGET_ADDRESS:  ${process.env.SUI_TARGET_ADDRESS}\n` +
+        `DISCORD_TOKEN:       ${process.env.DISCORD_TOKEN ? '[SET]' : '[NOT SET]'}\n` +
+        `DISCORD_CHANNEL_ID:  ${process.env.DISCORD_CHANNEL_ID}\n` +
+        `RPC_URL:             ${process.env.RPC_URL}\n` +
+        `===============================\n`;
+
+    console.log(log);
+    return log;
+}
 
 const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY;
 const TO_ADDRESS = process.env.SUI_TARGET_ADDRESS;
@@ -13,7 +52,7 @@ const RPC_URL = process.env.RPC_URL || 'https://rpc-mainnet.suiscan.xyz/';
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
-// ==== INIT SUI ====
+// SUI
 const provider = new JsonRpcProvider(new Connection({ fullnode: RPC_URL }));
 
 function privateKeyToKeypair(priv) {
@@ -26,16 +65,23 @@ function privateKeyToKeypair(priv) {
 const keypair = privateKeyToKeypair(SUI_PRIVATE_KEY);
 const signer = new RawSigner(keypair, provider);
 
-// ==== INIT DISCORD ====
+// DISCORD
 const discord = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
 async function sendDiscord(msg) {
     if (!discord.isReady()) return;
     const ch = await discord.channels.fetch(CHANNEL_ID).catch(() => null);
-    if (ch) await ch.send(msg).catch(() => {});
+    if (ch) await ch.send('```log\n' + msg + '\n```').catch(() => {});
 }
 
-// ==== SUI SWEEP FUNCTION ====
+// Gửi log khi start bot
+discord.once('ready', async () => {
+    console.log('Bot Discord đã sẵn sàng!');
+    const log = await logVersions();
+    await sendDiscord(log);
+    sweepAllSui();
+});
+
 async function sweepAllSui() {
     const address = await signer.getAddress();
     let sent = false;
@@ -44,9 +90,14 @@ async function sweepAllSui() {
             const coins = await provider.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
             const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
             const totalSui = Number(total) / 1e9;
-            console.log(`[${address.slice(0, 8)}...] Số dư hiện tại: ${totalSui} SUI`);
+            const statusLog = `[${address.slice(0, 8)}...] Số dư hiện tại: ${totalSui} SUI`;
+            console.log(statusLog);
+            await sendDiscord(statusLog);
+
             coins.data.forEach((c, i) => {
-                console.log(`  Object ${i+1}: id=${c.coinObjectId} balance=${Number(c.balance)/1e9} SUI`);
+                const objlog = `  Object ${i+1}: id=${c.coinObjectId} balance=${Number(c.balance)/1e9} SUI`;
+                console.log(objlog);
+                sendDiscord(objlog);
             });
 
             if (totalSui > 0.01 && coins.data.length > 0 && !sent) {
@@ -70,23 +121,21 @@ async function sweepAllSui() {
                         console.log(msg);
                         await sendDiscord(msg);
                     } catch (err) {
-                        console.error("Lỗi khi rút object:", coin.coinObjectId, err.message);
+                        const errMsg = `Lỗi khi rút object ${coin.coinObjectId}: ${err.message}`;
+                        console.error(errMsg);
+                        await sendDiscord(errMsg);
                     }
                 }
                 sent = true;
             }
             if (totalSui <= 0.01) sent = false;
         } catch (e) {
-            console.error("Lỗi sweepAllSui:", e);
+            const errMsg = "Lỗi sweepAllSui: " + e;
+            console.error(errMsg);
+            await sendDiscord(errMsg);
         }
         await new Promise(res => setTimeout(res, 1000));
     }
 }
-
-// ==== DISCORD EVENT ====
-discord.once('ready', () => {
-    console.log('Bot Discord đã sẵn sàng!');
-    sweepAllSui();
-});
 
 discord.login(DISCORD_TOKEN);
