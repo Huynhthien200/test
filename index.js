@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { parseExportedKeypair } from '@mysten/sui/keypairs';
 import { Transaction } from '@mysten/sui/transactions';
 import { fromB64 } from '@mysten/bcs';
 import { Client, GatewayIntentBits } from 'discord.js';
+import { bech32m } from 'bech32';
 
 const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY;
 const TO_ADDRESS = process.env.SUI_TARGET_ADDRESS;
@@ -15,9 +15,10 @@ const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
 function privateKeyToKeypair(priv) {
     if (priv.startsWith('suiprivkey1')) {
-        // Sử dụng parseExportedKeypair để lấy ra { schema, secretKey }
-        const { schema, secretKey } = parseExportedKeypair(priv);
-        // Tạo keypair từ secretKey (Uint8Array)
+        // decode bech32m
+        const decoded = bech32m.decode(priv);
+        const data = bech32m.fromWords(decoded.words);
+        const secretKey = Uint8Array.from(data);
         return Ed25519Keypair.fromSecretKey(secretKey);
     }
     // Nếu là base64
