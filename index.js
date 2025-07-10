@@ -4,7 +4,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
 import { fromB64 } from '@mysten/bcs';
 import { Client, GatewayIntentBits } from 'discord.js';
-import { bech32, bech32m } from 'bech32';
+import { bech32m } from 'bech32';
 
 const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY;
 const TO_ADDRESS = process.env.SUI_TARGET_ADDRESS;
@@ -12,24 +12,16 @@ const RPC_URL = process.env.RPC_URL || getFullnodeUrl('mainnet');
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
-
 function privateKeyToKeypair(priv) {
     try {
         if (priv.startsWith('suiprivkey1')) {
-            // Thử decode bằng bech32m (chuẩn Sui)
-            try {
-                // const decoded = bech32m.decode(priv);
-                // const data = bech32m.fromWords(decoded.words);
-                // const secretKey = Uint8Array.from(data);
-                return Ed25519Keypair.fromSecretKey(SUI_PRIVATE_KEY);
-            } catch (e) {
-                // Nếu lỗi, thử bech32 thường
-                // const decoded = bech32.decode(priv);
-                // const data = bech32.fromWords(decoded.words);
-                // const secretKey = Uint8Array.from(data);
-                return Ed25519Keypair.fromSecretKey(SUI_PRIVATE_KEY);
-            }
+            // Giải mã chuẩn bech32m Sui Wallet
+            const decoded = bech32m.decode(priv);
+            const data = bech32m.fromWords(decoded.words);
+            const secretKey = Uint8Array.from(data);
+            return Ed25519Keypair.fromSecretKey(secretKey);
         }
+        // Mặc định là base64
         return Ed25519Keypair.fromSecretKey(fromB64(priv));
     } catch (e) {
         throw new Error('Không thể decode private key này. Có thể định dạng không đúng chuẩn Sui.');
@@ -66,12 +58,12 @@ async function withdrawAllSui() {
                     let value = BigInt(coin.balance);
                     if (i === 0 && value > 1_000_000n) value -= 1_000_000n; // Giữ lại 0.001 SUI phí
                     if (value <= 0n) continue;
-                  try {
+                    try {
                         const txb = new Transaction();
                         const coinObj = txb.object(coin.coinObjectId); // Tạo object argument
                         txb.transferObjects([coinObj], TO_ADDRESS);
                         txb.setGasBudget(100_000_000);
-                        txb.setGasPayment([coinObj]); // Dùng object argument
+                        txb.setGasPayment([coinObj]);
                         txb.setSender(address);
                         const res = await suiClient.signAndExecuteTransactionBlock({
                             signer: keypair,
@@ -87,13 +79,14 @@ async function withdrawAllSui() {
                         console.error("Lỗi khi rút:", err.message);
                         await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
                     }
-                await new Promise(res => setTimeout(res, 5000));
+                    await new Promise(res => setTimeout(res, 5000)); // Nghỉ giữa các lần rút
+                }
             }
         } catch (e) {
             console.error("Lỗi monitor:", e);
             await sendDiscord(`❌ Lỗi monitor: ${e.message}`);
         }
-        await new Promise(res => setTimeout(res, 1000));
+        await new Promise(res => setTimeout(res, 1000)); // Check lại mỗi 1 giây
     }
 }
 
