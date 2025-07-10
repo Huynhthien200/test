@@ -78,9 +78,9 @@ async function withdrawAllSui() {
                 txb.setSender(address);
 
                 try {
-                    const res = await suiClient.signAndExecuteTransactionBlock({
+                    const res = await suiClient.signAndExecuteTransaction({
                         signer: keypair,
-                        transactionBlock: txb
+                        transaction: txb,
                     });
                     const msg =
                         `🚨 **RÚT SUI** 🚨\n` +
