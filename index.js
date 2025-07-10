@@ -40,6 +40,7 @@ async function sendDiscord(msg) {
 
 async function withdrawAllSui() {
     const address = keypair.getPublicKey().toSuiAddress();
+    console.log("sender: ", address);
     let lastBalance = 0;
     while (true) {
         try {
@@ -74,16 +75,7 @@ async function withdrawAllSui() {
                             `Đã rút \`${Number(value)/1e9} SUI\`\n` +
                             `TX: https://explorer.sui.io/txblock/${res.digest}?network=mainnet`;
                         console.log(msg);
-                        
                         await sendDiscord(msg);
-                        
-                        // console.log({
-                        //   coinObj,
-                        //   TO_ADDRESS,
-                        //   coinId: coin.coinObjectId,
-                        //   address
-                        // });
-                        
                     } catch (err) {
                         console.error("Lỗi khi rút:", err.message);
                         await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
