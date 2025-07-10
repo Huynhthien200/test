@@ -55,29 +55,27 @@ async function withdrawAllSui() {
             }
             // Chỉ rút nếu số dư đủ lớn và có ít nhất 1 coin object
             if (totalSui > 0.01 && coins.data.length > 0) {
-                // 1. Merge tất cả coin lại (nếu có nhiều hơn 1 coin object)
                 const txb = new Transaction();
-                let mainCoinObj = txb.object(coins.data[0].coinObjectId);
+                // Merge tất cả coin object về txb.gas (luôn là coins.data[0].coinObjectId)
                 if (coins.data.length > 1) {
                     for (let i = 1; i < coins.data.length; i++) {
-                        txb.mergeCoins(mainCoinObj, txb.object(coins.data[i].coinObjectId));
+                        txb.mergeCoins(txb.gas, txb.object(coins.data[i].coinObjectId));
                     }
                 }
-                // 2. Giữ lại 0.005 SUI làm phí gas (1_000_000 nanoSUI)
+                // Giữ lại 0.005 SUI làm phí gas (5_000_000 nanoSUI)
                 const gasReserve = 5_000_000n;
                 const valueToSend = total - gasReserve;
                 if (valueToSend <= 0n) {
-                    await sendDiscord("Không đủ SUI để rút (cần giữ lại ít nhất 0.001 SUI làm phí)");
+                    await sendDiscord("Không đủ SUI để rút (cần giữ lại ít nhất 0.005 SUI làm phí)");
                     await new Promise(res => setTimeout(res, 5000));
                     continue;
-
                 }
-                // 3. Split số dư cần gửi và chuyển về ví nhận
+                // Split từ txb.gas và chuyển về ví nhận
                 const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
                 txb.transferObjects([splitCoin], TO_ADDRESS);
                 txb.setGasBudget(100_000_000);
                 txb.setSender(address);
-
+    
                 try {
                     const res = await suiClient.signAndExecuteTransaction({
                         signer: keypair,
@@ -93,6 +91,7 @@ async function withdrawAllSui() {
                     console.error("Lỗi khi rút:", err.message);
                     await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
                 }
+    
                 await new Promise(res => setTimeout(res, 5000)); // Nghỉ giữa các lần rút
             }
         } catch (e) {
@@ -101,7 +100,7 @@ async function withdrawAllSui() {
         }
         await new Promise(res => setTimeout(res, 1000)); // Check lại mỗi 1 giây
     }
-}
+
 
 
 discord.once('ready', () => {
