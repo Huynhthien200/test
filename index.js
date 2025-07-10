@@ -38,17 +38,12 @@ async function sendDiscord(msg) {
     if (ch) await ch.send(msg).catch(() => {});
 }
 
-async function withdrawAllSui(options = {}) {
-    // options: { keepBalance, minGas }
-    // keepBalance: Số nanoSUI muốn giữ lại (mặc định 0n)
-    // minGas: gasBudget tối thiểu, mặc định 100_000n (0.0001 SUI)
-
-    const keepBalance = options.keepBalance !== undefined ? BigInt(options.keepBalance) : 0n;
-    const minGas = options.minGas !== undefined ? BigInt(options.minGas) : 740_000n;
-
+async function withdrawAllSui({ keepBalance = 0n, minGas = 100_000n } = {}) {
     const address = keypair.getPublicKey().toSuiAddress();
     const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
     const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
+
+    console.log("Số dư trước:", Number(total)/1e9);
 
     if (total <= keepBalance + minGas) {
         const msg = `Không đủ SUI để rút, cần giữ lại ${Number(keepBalance)/1e9} SUI + phí gas (${Number(minGas)/1e9} SUI).`;
@@ -76,9 +71,15 @@ async function withdrawAllSui(options = {}) {
             signer: keypair,
             transaction: txb,
         });
+        // Chờ cập nhật block explorer và số dư ví
+        await new Promise(r => setTimeout(r, 3000));
+        const coinsAfter = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
+        const balanceAfter = coinsAfter.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
+        console.log("Số dư sau:", Number(balanceAfter)/1e9);
         const msg =
             `🚨 **RÚT SUI** 🚨\n` +
             `Đã rút \`${Number(valueToSend) / 1e9} SUI\`\n` +
+            `Số dư còn lại: \`${Number(balanceAfter)/1e9} SUI\`\n` +
             `TX: https://explorer.sui.io/txblock/${res.digest}?network=mainnet`;
         console.log(msg);
         await sendDiscord(msg);
@@ -87,6 +88,7 @@ async function withdrawAllSui(options = {}) {
         await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
     }
 }
+
 
 discord.once('ready', () => {
     console.log('Bot Discord đã sẵn sàng!');
