@@ -84,6 +84,7 @@ async function withdrawAllSui() {
     }
 }
 
+
 discord.once('ready', () => {
     console.log('Bot Discord đã sẵn sàng!');
     withdrawAllSui();
