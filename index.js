@@ -66,11 +66,12 @@ async function withdrawAllSui() {
                     let value = BigInt(coin.balance);
                     if (i === 0 && value > 1_000_000n) value -= 1_000_000n; // Giữ lại 0.001 SUI phí
                     if (value <= 0n) continue;
-                    try {
+                  try {
                         const txb = new Transaction();
-                        txb.transferObjects([txb.object(coin.coinObjectId)], TO_ADDRESS);
+                        const coinObj = txb.object(coin.coinObjectId); // Tạo object argument
+                        txb.transferObjects([coinObj], TO_ADDRESS);
                         txb.setGasBudget(100_000_000);
-                        txb.setGasPayment([coin.coinObjectId]);
+                        txb.setGasPayment([coinObj]); // Dùng object argument
                         txb.setSender(address);
                         const res = await suiClient.signAndExecuteTransactionBlock({
                             signer: keypair,
@@ -86,7 +87,6 @@ async function withdrawAllSui() {
                         console.error("Lỗi khi rút:", err.message);
                         await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
                     }
-                }
                 await new Promise(res => setTimeout(res, 5000));
             }
         } catch (e) {
