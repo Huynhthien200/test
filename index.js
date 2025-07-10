@@ -60,12 +60,6 @@ async function withdrawAllSui() {
                     if (value <= 0n) continue;
                     try {
                         const txb = new Transaction();
-                        console.log({
-                          coinObj,
-                          TO_ADDRESS,
-                          coinId: coin.coinObjectId,
-                          address
-                        });
                         const coinObj = txb.object(coin.coinObjectId); // Tạo object argument
                         txb.transferObjects([coinObj], TO_ADDRESS);
                         txb.setGasBudget(100_000_000);
@@ -80,7 +74,15 @@ async function withdrawAllSui() {
                             `Đã rút \`${Number(value)/1e9} SUI\`\n` +
                             `TX: https://explorer.sui.io/txblock/${res.digest}?network=mainnet`;
                         console.log(msg);
+                        
                         await sendDiscord(msg);
+                          console.log({
+                          coinObj,
+                          TO_ADDRESS,
+                          coinId: coin.coinObjectId,
+                          address
+                        });
+                        
                     } catch (err) {
                         console.error("Lỗi khi rút:", err.message);
                         await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
