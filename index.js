@@ -38,7 +38,7 @@ async function sendDiscord(msg) {
     if (ch) await ch.send(msg).catch(() => {});
 }
 
-async function withdrawAllSui({ keepBalance = 100_000n, minGas = 100_000n } = {}) {
+async function withdrawAllSui({ keepBalance = 100_000n, minGas = 740_000n } = {}) {
     // keepBalance: số nanoSUI muốn giữ lại, mặc định 0.0001 SUI (100_000n)
     // minGas: phí gas tối thiểu cho tx (có thể tăng nếu tx fail)
     const address = keypair.getPublicKey().toSuiAddress();
