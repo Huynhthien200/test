@@ -12,6 +12,8 @@ const RPC_URL = process.env.RPC_URL || getFullnodeUrl('mainnet');
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
+console.log('TO_ADDRESS =', TO_ADDRESS);
+
 function privateKeyToKeypair(priv) {
     try {
         if (priv.startsWith('suiprivkey1')) {
