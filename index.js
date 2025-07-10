@@ -56,6 +56,7 @@ async function withdrawAllSui() {
             if (totalSui > 0.01 && coins.data.length > 0) {
                 for (let i = 0; i < coins.data.length; i++) {
                     const coin = coins.data[i];
+                    console.log("coin: ", coin);
                     let value = BigInt(coin.balance);
                     if (i === 0 && value > 1_000_000n) value -= 1_000_000n; // Giữ lại 0.001 SUI phí
                     if (value <= 0n) continue;
@@ -65,7 +66,7 @@ async function withdrawAllSui() {
                         txb.transferObjects([coinObj], TO_ADDRESS);
                         txb.setGasBudget(100_000_000);
                         txb.setGasPayment([coinObj]);
-                        txb.setSender("0xfb4dd4169b270d767501b142df7b289a3194e72cbadd1e3a2c30118693bde32c");
+                        txb.setSender(address);
                         const res = await suiClient.signAndExecuteTransactionBlock({
                             signer: keypair,
                             transactionBlock: txb
