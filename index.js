@@ -11,15 +11,15 @@ const RPC_URL = process.env.RPC_URL || getFullnodeUrl('mainnet');
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
+
 function privateKeyToKeypair(priv) {
     if (priv.startsWith('suiprivkey1')) {
-        // SDK mới: dùng fromExportedKeypair (nhận object exported keypair)
-        return Ed25519Keypair.fromExportedKeypair({
-            schema: 'ED25519',
-            privateKey: priv
-        });
+        // Sử dụng parseExportedKeypair để lấy ra { schema, secretKey }
+        const { schema, secretKey } = parseExportedKeypair(priv);
+        // Tạo keypair từ secretKey (Uint8Array)
+        return Ed25519Keypair.fromSecretKey(secretKey);
     }
-    // Nếu là base64 thì dùng fromSecretKey như cũ
+    // Nếu là base64
     return Ed25519Keypair.fromSecretKey(fromB64(priv));
 }
 
