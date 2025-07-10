@@ -38,12 +38,12 @@ async function sendDiscord(msg) {
     if (ch) await ch.send(msg).catch(() => {});
 }
 
-async function withdrawAllSui({ keepBalance = 0n, minGas = 100_000n } = {}) {
+async function withdrawAllSui({ keepBalance = 100_000n, minGas = 100_000n } = {}) {
+    // keepBalance: số nanoSUI muốn giữ lại, mặc định 0.0001 SUI (100_000n)
+    // minGas: phí gas tối thiểu cho tx (có thể tăng nếu tx fail)
     const address = keypair.getPublicKey().toSuiAddress();
     const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
     const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
-
-    console.log("Số dư trước:", Number(total)/1e9);
 
     if (total <= keepBalance + minGas) {
         const msg = `Không đủ SUI để rút, cần giữ lại ${Number(keepBalance)/1e9} SUI + phí gas (${Number(minGas)/1e9} SUI).`;
@@ -52,7 +52,8 @@ async function withdrawAllSui({ keepBalance = 0n, minGas = 100_000n } = {}) {
         return;
     }
 
-    const valueToSend = total - keepBalance - minGas;
+    // Chỉ thực hiện đúng 1 transaction rút gần hết SUI, giữ lại đúng số bạn muốn
+    const valueToSend = total - keepBalance;
     const gasBudget = Number(minGas);
 
     const txb = new Transaction();
@@ -71,11 +72,10 @@ async function withdrawAllSui({ keepBalance = 0n, minGas = 100_000n } = {}) {
             signer: keypair,
             transaction: txb,
         });
-        // Chờ cập nhật block explorer và số dư ví
-        await new Promise(r => setTimeout(r, 3000));
+        // Đợi block cập nhật số dư
+        await new Promise(r => setTimeout(r, 2000));
         const coinsAfter = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
         const balanceAfter = coinsAfter.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
-        console.log("Số dư sau:", Number(balanceAfter)/1e9);
         const msg =
             `🚨 **RÚT SUI** 🚨\n` +
             `Đã rút \`${Number(valueToSend) / 1e9} SUI\`\n` +
