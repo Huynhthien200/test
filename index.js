@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { Ed25519Keypair, decodeSuiPrivateKey } from '@mysten/sui/keypairs/ed25519';
-import { TransactionBlock } from '@mysten/sui/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 import { fromB64 } from '@mysten/bcs';
 import { Client, GatewayIntentBits } from 'discord.js';
 
@@ -50,7 +50,7 @@ async function withdrawAllSui() {
                     if (i === 0 && value > 1_000_000n) value -= 1_000_000n; // Giữ lại 0.001 SUI phí
                     if (value <= 0n) continue;
                     try {
-                        const txb = new TransactionBlock();
+                        const txb = new Transaction();
                         txb.transferObjects([txb.object(coin.coinObjectId)], TO_ADDRESS);
                         txb.setGasBudget(100_000_000);
                         txb.setGasPayment([coin.coinObjectId]);
