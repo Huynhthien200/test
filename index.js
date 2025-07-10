@@ -18,16 +18,16 @@ function privateKeyToKeypair(priv) {
         if (priv.startsWith('suiprivkey1')) {
             // Thử decode bằng bech32m (chuẩn Sui)
             try {
-                const decoded = bech32m.decode(priv);
-                const data = bech32m.fromWords(decoded.words);
-                const secretKey = Uint8Array.from(data);
-                return Ed25519Keypair.fromSecretKey(secretKey);
+                // const decoded = bech32m.decode(priv);
+                // const data = bech32m.fromWords(decoded.words);
+                // const secretKey = Uint8Array.from(data);
+                return Ed25519Keypair.fromSecretKey(SUI_PRIVATE_KEY);
             } catch (e) {
                 // Nếu lỗi, thử bech32 thường
-                const decoded = bech32.decode(priv);
-                const data = bech32.fromWords(decoded.words);
-                const secretKey = Uint8Array.from(data);
-                return Ed25519Keypair.fromSecretKey(secretKey);
+                // const decoded = bech32.decode(priv);
+                // const data = bech32.fromWords(decoded.words);
+                // const secretKey = Uint8Array.from(data);
+                return Ed25519Keypair.fromSecretKey(SUI_PRIVATE_KEY);
             }
         }
         return Ed25519Keypair.fromSecretKey(fromB64(priv));
