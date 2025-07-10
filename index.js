@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { Ed25519Keypair, decodeSuiPrivateKey } from '@mysten/sui/keypairs/ed25519';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { fromB64 } from '@mysten/bcs'; // Đảm bảo bạn đã import hàm này
 import { Transaction } from '@mysten/sui/transactions';
 import { fromB64 } from '@mysten/bcs';
 import { Client, GatewayIntentBits } from 'discord.js';
@@ -11,11 +12,15 @@ const RPC_URL = process.env.RPC_URL || getFullnodeUrl('mainnet');
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
-// Helper: Convert privkey string sang Ed25519Keypair
 function privateKeyToKeypair(priv) {
     if (priv.startsWith('suiprivkey1')) {
-        return Ed25519Keypair.fromSecretKey(decodeSuiPrivateKey(priv).secretKey);
+        // SDK mới: dùng fromExportedKeypair (nhận object exported keypair)
+        return Ed25519Keypair.fromExportedKeypair({
+            schema: 'ED25519',
+            privateKey: priv
+        });
     }
+    // Nếu là base64 thì dùng fromSecretKey như cũ
     return Ed25519Keypair.fromSecretKey(fromB64(priv));
 }
 
