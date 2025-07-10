@@ -40,48 +40,54 @@ async function sendDiscord(msg) {
 
 async function withdrawAllSui({ buffer = 50_000n, minGas = 1_000_000n } = {}) {
     const address = keypair.getPublicKey().toSuiAddress();
-    const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
-    const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
+    while (true) {
+        try {
+            const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
+            const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
 
-    if (total <= minGas + buffer) {
-        const msg = `Không đủ SUI để rút, cần giữ lại phí gas (${Number(minGas)/1e9} SUI) + buffer (${Number(buffer)/1e9} SUI).`;
-        console.log(msg);
-        await sendDiscord(msg);
-        return;
-    }
+            if (total > minGas + buffer) {
+                const valueToSend = total - minGas - buffer;
+                const gasBudget = Number(minGas);
 
-    const valueToSend = total - minGas - buffer;
-    const gasBudget = Number(minGas);
+                const txb = new Transaction();
+                if (coins.data.length > 1) {
+                    const sourceObjects = coins.data.slice(1).map(c => txb.object(c.coinObjectId));
+                    txb.mergeCoins(txb.gas, sourceObjects);
+                }
 
-    const txb = new Transaction();
-    if (coins.data.length > 1) {
-        const sourceObjects = coins.data.slice(1).map(c => txb.object(c.coinObjectId));
-        txb.mergeCoins(txb.gas, sourceObjects);
-    }
+                const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
+                txb.transferObjects([splitCoin], TO_ADDRESS);
+                txb.setGasBudget(gasBudget);
+                txb.setSender(address);
 
-    const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
-    txb.transferObjects([splitCoin], TO_ADDRESS);
-    txb.setGasBudget(gasBudget);
-    txb.setSender(address);
-
-    try {
-        const res = await suiClient.signAndExecuteTransaction({
-            signer: keypair,
-            transaction: txb,
-        });
-        await new Promise(r => setTimeout(r, 2000));
-        const coinsAfter = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
-        const balanceAfter = coinsAfter.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
-        const msg =
-            `🚨 **RÚT SUI** 🚨\n` +
-            `Đã rút \`${Number(valueToSend) / 1e9} SUI\`\n` +
-            `Số dư còn lại: \`${Number(balanceAfter)/1e9} SUI\`\n` +
-            `TX: https://explorer.sui.io/txblock/${res.digest}?network=mainnet`;
-        console.log(msg);
-        await sendDiscord(msg);
-    } catch (err) {
-        console.error("Lỗi khi rút:", err.message);
-        await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
+                try {
+                    const res = await suiClient.signAndExecuteTransaction({
+                        signer: keypair,
+                        transaction: txb,
+                    });
+                    await new Promise(r => setTimeout(r, 2000));
+                    const coinsAfter = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
+                    const balanceAfter = coinsAfter.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
+                    const msg =
+                        `🚨 **RÚT SUI** 🚨\n` +
+                        `Đã rút \`${Number(valueToSend) / 1e9} SUI\`\n` +
+                        `Số dư còn lại: \`${Number(balanceAfter)/1e9} SUI\`\n` +
+                        `TX: https://explorer.sui.io/txblock/${res.digest}?network=mainnet`;
+                    console.log(msg);
+                    await sendDiscord(msg);
+                } catch (err) {
+                    console.error("Lỗi khi rút:", err.message);
+                    await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
+                }
+            } else {
+                // Nếu không đủ để rút, có thể log trạng thái
+                console.log(`[${new Date().toLocaleTimeString()}] Số dư: ${(Number(total)/1e9).toFixed(6)} SUI (chưa đủ để rút)`);
+            }
+        } catch (err) {
+            console.error("Lỗi khi kiểm tra số dư hoặc rút:", err.message);
+        }
+        // Đợi 1 giây rồi kiểm tra lại
+        await new Promise(r => setTimeout(r, 1000));
     }
 }
 
