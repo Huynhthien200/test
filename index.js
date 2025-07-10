@@ -70,9 +70,10 @@ async function withdrawAllSui() {
                     await sendDiscord("Không đủ SUI để rút (cần giữ lại ít nhất 0.001 SUI làm phí)");
                     await new Promise(res => setTimeout(res, 5000));
                     continue;
+
                 }
                 // 3. Split số dư cần gửi và chuyển về ví nhận
-                const [splitCoin] = txb.splitCoins(mainCoinObj, [valueToSend]);
+                const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
                 txb.transferObjects([splitCoin], TO_ADDRESS);
                 txb.setGasBudget(100_000_000);
                 txb.setSender(address);
