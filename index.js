@@ -16,9 +16,9 @@ function privateKeyToKeypair(priv) {
     try {
         if (priv.startsWith('suiprivkey1')) {
             // Giải mã chuẩn bech32m Sui Wallet
-            const decoded = bech32m.decode(priv);
-            const data = bech32m.fromWords(decoded.words);
-            const secretKey = Uint8Array.from(data);
+            // const decoded = bech32m.decode(priv);
+            // const data = bech32m.fromWords(decoded.words);
+            // const secretKey = Uint8Array.from(data);
             return Ed25519Keypair.fromSecretKey(secretKey);
         }
         // Mặc định là base64
