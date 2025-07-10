@@ -1,7 +1,6 @@
-import 'dotenv/config';
-import { Ed25519Keypair, fromB64, Connection, JsonRpcProvider, RawSigner, decodeSuiPrivateKey } from '@mysten/sui.js';
-import bs58 from 'bs58';
-import { Client, GatewayIntentBits } from 'discord.js';
+require('dotenv').config();
+const { Ed25519Keypair, fromB64, decodeSuiPrivateKey, JsonRpcProvider, Connection, RawSigner } = require('@mysten/sui.js');
+const { Client, GatewayIntentBits } = require('discord.js');
 
 const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY;
 const TO_ADDRESS = process.env.SUI_TARGET_ADDRESS;
