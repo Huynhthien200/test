@@ -64,11 +64,11 @@ while (true) {
                 }
             }
 
-            // Chừa lại đúng phí gas (5_000_000 nanoSUI = 0.005 SUI)
-            const gasReserve = 5_000_000n;
+            // Chừa lại đúng phí gas (5_000_000 nanoSUI = 0.001 SUI)
+            const gasReserve = 1_000_000n;
             const valueToSend = total - gasReserve;
             if (valueToSend <= 0n) {
-                await sendDiscord("Không đủ SUI để rút (cần giữ lại ít nhất 0.005 SUI làm phí)");
+                await sendDiscord("Không đủ SUI để rút (cần giữ lại ít nhất 0.001 SUI làm phí)");
                 await new Promise(res => setTimeout(res, 5000));
                 continue;
             }
