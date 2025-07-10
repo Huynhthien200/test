@@ -1,6 +1,6 @@
-require('dotenv').config();
-const { Ed25519Keypair, fromB64, decodeSuiPrivateKey, JsonRpcProvider, Connection, RawSigner } = require('@mysten/sui.js');
-const { Client, GatewayIntentBits } = require('discord.js');
+import 'dotenv/config';
+import { Ed25519Keypair, fromB64, decodeSuiPrivateKey, JsonRpcProvider, Connection, RawSigner } from '@mysten/sui.js';
+import { Client, GatewayIntentBits } from 'discord.js';
 
 const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY;
 const TO_ADDRESS = process.env.SUI_TARGET_ADDRESS;
@@ -8,7 +8,6 @@ const RPC_URL = process.env.RPC_URL || 'https://rpc-mainnet.suiscan.xyz/';
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
-// ===== INIT SUI =====
 const provider = new JsonRpcProvider(new Connection({ fullnode: RPC_URL }));
 
 function privateKeyToKeypair(priv) {
@@ -18,6 +17,7 @@ function privateKeyToKeypair(priv) {
     }
     return Ed25519Keypair.fromSecretKey(fromB64(priv));
 }
+
 const keypair = privateKeyToKeypair(SUI_PRIVATE_KEY);
 const signer = new RawSigner(keypair, provider);
 
