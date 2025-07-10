@@ -1,10 +1,10 @@
 {
   "type": "module",
-  "name": "sui-sweeper-bot",
+  "name": "sui-auto-withdraw-bot",
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
-    "@mysten/sui.js": "^0.55.0",
+    "@mysten/sui": "^1.36.0",
     "discord.js": "^14.13.0",
     "dotenv": "^16.3.1"
   }
