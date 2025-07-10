@@ -1,6 +1,11 @@
 import 'dotenv/config';
-import { Ed25519Keypair, fromB64, decodeSuiPrivateKey, JsonRpcProvider, Connection, RawSigner } from '@mysten/sui.js';
+import { Ed25519Keypair, fromB64, decodeSuiPrivateKey } from '@mysten/sui.js/keypairs/ed25519';
+import { JsonRpcProvider, Connection, RawSigner } from '@mysten/sui.js/providers';
 import { Client, GatewayIntentBits } from 'discord.js';
+import suiPkg from '@mysten/sui.js/package.json' assert { type: "json" };
+
+// Log version
+console.log('SUI.JS VERSION:', suiPkg.version);
 
 const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY;
 const TO_ADDRESS = process.env.SUI_TARGET_ADDRESS;
@@ -8,6 +13,7 @@ const RPC_URL = process.env.RPC_URL || 'https://rpc-mainnet.suiscan.xyz/';
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
+// ==== INIT SUI ====
 const provider = new JsonRpcProvider(new Connection({ fullnode: RPC_URL }));
 
 function privateKeyToKeypair(priv) {
@@ -17,10 +23,10 @@ function privateKeyToKeypair(priv) {
     }
     return Ed25519Keypair.fromSecretKey(fromB64(priv));
 }
-
 const keypair = privateKeyToKeypair(SUI_PRIVATE_KEY);
 const signer = new RawSigner(keypair, provider);
 
+// ==== INIT DISCORD ====
 const discord = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
 async function sendDiscord(msg) {
@@ -29,6 +35,7 @@ async function sendDiscord(msg) {
     if (ch) await ch.send(msg).catch(() => {});
 }
 
+// ==== SUI SWEEP FUNCTION ====
 async function sweepAllSui() {
     const address = await signer.getAddress();
     let sent = false;
@@ -46,7 +53,7 @@ async function sweepAllSui() {
                 for (let i = 0; i < coins.data.length; i++) {
                     const coin = coins.data[i];
                     let value = BigInt(coin.balance);
-                    if (i === 0 && value > 1_000_000n) value -= 1_000_000n;
+                    if (i === 0 && value > 1_000_000n) value -= 1_000_000n; // Chừa phí
                     if (value <= 0n) continue;
                     try {
                         const tx = await signer.transferSui({
@@ -76,6 +83,7 @@ async function sweepAllSui() {
     }
 }
 
+// ==== DISCORD EVENT ====
 discord.once('ready', () => {
     console.log('Bot Discord đã sẵn sàng!');
     sweepAllSui();
