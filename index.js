@@ -101,11 +101,14 @@ while (true) {
         console.error("Lỗi monitor:", e);
         await sendDiscord(`❌ Lỗi monitor: ${e.message}`);
     }
-      await new Promise(res => setTimeout(res, 1000));
-} // <-- ĐÓNG function withdrawAllSui TẠI ĐÂY!!!
+             await new Promise(res => setTimeout(res, 1000));
+    } // đóng while (true)
+} // đóng function withdrawAllSui
+
 discord.once('ready', () => {
     console.log('Bot Discord đã sẵn sàng!');
     withdrawAllSui();
 });
 
 discord.login(DISCORD_TOKEN);
+
