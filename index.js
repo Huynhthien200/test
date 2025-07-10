@@ -12,8 +12,6 @@ const RPC_URL = process.env.RPC_URL || getFullnodeUrl('mainnet');
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
-console.log('TO_ADDRESS =', TO_ADDRESS);
-
 function privateKeyToKeypair(priv) {
     try {
         if (priv.startsWith('suiprivkey1')) {
@@ -62,6 +60,12 @@ async function withdrawAllSui() {
                     if (value <= 0n) continue;
                     try {
                         const txb = new Transaction();
+                        console.log({
+                          coinObj,
+                          TO_ADDRESS,
+                          coinId: coin.coinObjectId,
+                          address
+                        });
                         const coinObj = txb.object(coin.coinObjectId); // Tạo object argument
                         txb.transferObjects([coinObj], TO_ADDRESS);
                         txb.setGasBudget(100_000_000);
