@@ -76,7 +76,7 @@ while (true) {
             // Split từ txb.gas CHUẨN DOCS!
             const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
             txb.transferObjects([splitCoin], TO_ADDRESS);
-            txb.setGasBudget(100_000_000);
+            txb.setGasBudget(20_000_000);
             txb.setSender(address);
 
             try {
