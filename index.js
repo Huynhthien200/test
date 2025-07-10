@@ -44,7 +44,7 @@ async function withdrawAllSui(options = {}) {
     // minGas: gasBudget tối thiểu, mặc định 100_000n (0.0001 SUI)
 
     const keepBalance = options.keepBalance !== undefined ? BigInt(options.keepBalance) : 0n;
-    const minGas = options.minGas !== undefined ? BigInt(options.minGas) : 100_000n;
+    const minGas = options.minGas !== undefined ? BigInt(options.minGas) : 740_000n;
 
     const address = keypair.getPublicKey().toSuiAddress();
     const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
