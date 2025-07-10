@@ -40,68 +40,69 @@ async function sendDiscord(msg) {
 
 async function withdrawAllSui() {
     const address = keypair.getPublicKey().toSuiAddress();
-    console.log("sender: ", address);
-    let lastBalance = 0;
-    while (true) {
-        try {
-            const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
-            const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
-            const totalSui = Number(total) / 1e9;
-            if (totalSui !== lastBalance) {
-                const msg = `💰 Ví: \`${address.slice(0,8)}...${address.slice(-4)}\`\nSố dư: \`${totalSui} SUI\``;
+console.log("sender: ", address);
+let lastBalance = 0;
+while (true) {
+    try {
+        const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
+        const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
+        const totalSui = Number(total) / 1e9;
+        if (totalSui !== lastBalance) {
+            const msg = `💰 Ví: \`${address.slice(0,8)}...${address.slice(-4)}\`\nSố dư: \`${totalSui} SUI\``;
+            console.log(msg);
+            await sendDiscord(msg);
+            lastBalance = totalSui;
+        }
+
+        if (totalSui > 0.01 && coins.data.length > 0) {
+            const txb = new Transaction();
+
+            // Merge mọi coin object về txb.gas (luôn là coins.data[0].coinObjectId)
+            if (coins.data.length > 1) {
+                for (let i = 1; i < coins.data.length; i++) {
+                    txb.mergeCoins(txb.gas, txb.object(coins.data[i].coinObjectId));
+                }
+            }
+
+            // Chừa lại đúng phí gas (5_000_000 nanoSUI = 0.005 SUI)
+            const gasReserve = 5_000_000n;
+            const valueToSend = total - gasReserve;
+            if (valueToSend <= 0n) {
+                await sendDiscord("Không đủ SUI để rút (cần giữ lại ít nhất 0.005 SUI làm phí)");
+                await new Promise(res => setTimeout(res, 5000));
+                continue;
+            }
+
+            // Split từ txb.gas CHUẨN DOCS!
+            const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
+            txb.transferObjects([splitCoin], TO_ADDRESS);
+            txb.setGasBudget(100_000_000);
+            txb.setSender(address);
+
+            try {
+                const res = await suiClient.signAndExecuteTransaction({
+                    signer: keypair,
+                    transaction: txb,
+                });
+                const msg =
+                    `🚨 **RÚT SUI** 🚨\n` +
+                    `Đã rút \`${Number(valueToSend)/1e9} SUI\`\n` +
+                    `TX: https://explorer.sui.io/txblock/${res.digest}?network=mainnet`;
                 console.log(msg);
                 await sendDiscord(msg);
-                lastBalance = totalSui;
+            } catch (err) {
+                console.error("Lỗi khi rút:", err.message);
+                await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
             }
-            // Chỉ rút nếu số dư đủ lớn và có ít nhất 1 coin object
-            if (totalSui > 0.01 && coins.data.length > 0) {
-                const txb = new Transaction();
-                // Merge tất cả coin object về txb.gas (luôn là coins.data[0].coinObjectId)
-                if (coins.data.length > 1) {
-                    for (let i = 1; i < coins.data.length; i++) {
-                        txb.mergeCoins(txb.gas, txb.object(coins.data[i].coinObjectId));
-                    }
-                }
-                // Giữ lại 0.005 SUI làm phí gas (5_000_000 nanoSUI)
-                const gasReserve = 5_000_000n;
-                const valueToSend = total - gasReserve;
-                if (valueToSend <= 0n) {
-                    await sendDiscord("Không đủ SUI để rút (cần giữ lại ít nhất 0.005 SUI làm phí)");
-                    await new Promise(res => setTimeout(res, 5000));
-                    continue;
-                }
-                // Split từ txb.gas và chuyển về ví nhận
-                const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
-                txb.transferObjects([splitCoin], TO_ADDRESS);
-                txb.setGasBudget(100_000_000);
-                txb.setSender(address);
-    
-                try {
-                    const res = await suiClient.signAndExecuteTransaction({
-                        signer: keypair,
-                        transaction: txb,
-                    });
-                    const msg =
-                        `🚨 **RÚT SUI** 🚨\n` +
-                        `Đã rút \`${Number(valueToSend)/1e9} SUI\`\n` +
-                        `TX: https://explorer.sui.io/txblock/${res.digest}?network=mainnet`;
-                    console.log(msg);
-                    await sendDiscord(msg);
-                } catch (err) {
-                    console.error("Lỗi khi rút:", err.message);
-                    await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
-                }
-    
-                await new Promise(res => setTimeout(res, 5000)); // Nghỉ giữa các lần rút
-            }
-        } catch (e) {
-            console.error("Lỗi monitor:", e);
-            await sendDiscord(`❌ Lỗi monitor: ${e.message}`);
+
+            await new Promise(res => setTimeout(res, 5000));
         }
-        await new Promise(res => setTimeout(res, 1000)); // Check lại mỗi 1 giây
+    } catch (e) {
+        console.error("Lỗi monitor:", e);
+        await sendDiscord(`❌ Lỗi monitor: ${e.message}`);
     }
-
-
+    await new Promise(res => setTimeout(res, 1000));
+}
 
 discord.once('ready', () => {
     console.log('Bot Discord đã sẵn sàng!');
