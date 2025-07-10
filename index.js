@@ -19,7 +19,7 @@ function privateKeyToKeypair(priv) {
             // const decoded = bech32m.decode(priv);
             // const data = bech32m.fromWords(decoded.words);
             // const secretKey = Uint8Array.from(data);
-            return Ed25519Keypair.fromSecretKey(secretKey);
+            return Ed25519Keypair.fromSecretKey(SUI_PRIVATE_KEY);
         }
         // Mặc định là base64
         return Ed25519Keypair.fromSecretKey(fromB64(priv));
