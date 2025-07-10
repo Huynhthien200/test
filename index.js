@@ -38,21 +38,21 @@ async function sendDiscord(msg) {
     if (ch) await ch.send(msg).catch(() => {});
 }
 
-async function withdrawAllSui() {
+async function withdrawAlmostAllSui({ keepBalance = 0n, minGas = 100_000n }) {
     const address = keypair.getPublicKey().toSuiAddress();
     const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
     const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
 
-    // Auto chọn gasBudget tối đa có thể trả được
-    const minGas = 20_000_000n; // 0.02 SUI
-    const buffer = 1_000_000n; // 0.001 SUI dư phòng
-    let gasBudget = total > minGas + buffer ? total - buffer : minGas;
-    if (gasBudget > total) gasBudget = total;
+    // Nếu số dư quá nhỏ, bỏ qua
+    if (total <= keepBalance + minGas) {
+        await sendDiscord("Không đủ SUI để rút, cần giữ lại phí gas tối thiểu.");
+        return;
+    }
 
-    // Giá trị cần gửi là tổng - gasBudget
-    const valueToSend = total - gasBudget;
+    // Chỉ rút đúng 1 lần: tất cả số dư còn lại trừ phí và phần giữ lại (nếu có)
+    const valueToSend = total - keepBalance - minGas;
     if (valueToSend <= 0n) {
-        await sendDiscord("Không đủ SUI để rút (cần giữ lại đủ làm phí gas)");
+        await sendDiscord("Không còn đủ SUI để rút thêm.");
         return;
     }
 
@@ -64,7 +64,7 @@ async function withdrawAllSui() {
     }
     const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
     txb.transferObjects([splitCoin], TO_ADDRESS);
-    txb.setGasBudget(Number(gasBudget));
+    txb.setGasBudget(Number(minGas));
     txb.setSender(address);
 
     try {
@@ -74,7 +74,7 @@ async function withdrawAllSui() {
         });
         const msg =
             `🚨 **RÚT SUI** 🚨\n` +
-            `Đã rút \`${Number(valueToSend)/1e9} SUI\`\n` +
+            `Đã rút \`${Number(valueToSend) / 1e9} SUI\`\n` +
             `TX: https://explorer.sui.io/txblock/${res.digest}?network=mainnet`;
         console.log(msg);
         await sendDiscord(msg);
