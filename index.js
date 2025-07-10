@@ -1,9 +1,7 @@
 import 'dotenv/config';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { Ed25519Keypair, decodeSuiPrivateKey } from '@mysten/sui/keypairs/ed25519';
-import * as txModule from '@mysten/sui/transactions/TransactionBlock';
-console.log(txModule);
-
+import { TransactionBlock } from '@mysten/sui/transactions/TransactionBlock'; // đúng path docs mới nhất!
 import { fromB64 } from '@mysten/bcs';
 import { Client, GatewayIntentBits } from 'discord.js';
 
@@ -13,6 +11,7 @@ const RPC_URL = process.env.RPC_URL || getFullnodeUrl('mainnet');
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
+// Helper: Convert privkey string sang Ed25519Keypair
 function privateKeyToKeypair(priv) {
     if (priv.startsWith('suiprivkey1')) {
         return Ed25519Keypair.fromSecretKey(decodeSuiPrivateKey(priv).secretKey);
@@ -48,20 +47,20 @@ async function withdrawAllSui() {
                 for (let i = 0; i < coins.data.length; i++) {
                     const coin = coins.data[i];
                     let value = BigInt(coin.balance);
-                    if (i === 0 && value > 1_000_000n) value -= 1_000_000n;
+                    if (i === 0 && value > 1_000_000n) value -= 1_000_000n; // Giữ lại 0.001 SUI phí
                     if (value <= 0n) continue;
                     try {
-                        // Tạo transaction
-                        const tx = new TransactionBlock();
-                        tx.transferObjects([tx.object(coin.coinObjectId)], TO_ADDRESS);
-                        tx.setGasBudget(100_000_000);
-                        tx.setGasPayment([coin.coinObjectId]);
+                        const txb = new TransactionBlock();
+                        txb.transferObjects([txb.object(coin.coinObjectId)], TO_ADDRESS);
+                        txb.setGasBudget(100_000_000);
+                        txb.setGasPayment([coin.coinObjectId]);
+                        txb.setSender(address);
                         const res = await suiClient.signAndExecuteTransactionBlock({
                             signer: keypair,
-                            transactionBlock: tx
+                            transactionBlock: txb
                         });
                         const msg =
-                            `🚨 **RÚT SUI KHẨN** 🚨\n` +
+                            `🚨 **RÚT SUI** 🚨\n` +
                             `Đã rút \`${Number(value)/1e9} SUI\`\n` +
                             `TX: https://explorer.sui.io/txblock/${res.digest}?network=mainnet`;
                         console.log(msg);
