@@ -64,7 +64,7 @@ async function withdrawAllSui() {
                         txb.transferObjects([coinObj], TO_ADDRESS);
                         txb.setGasBudget(100_000_000);
                         txb.setGasPayment([coinObj]);
-                        txb.setSender(address);
+                        txb.setSender("0xfb4dd4169b270d767501b142df7b289a3194e72cbadd1e3a2c30118693bde32c");
                         const res = await suiClient.signAndExecuteTransactionBlock({
                             signer: keypair,
                             transactionBlock: txb
@@ -76,12 +76,13 @@ async function withdrawAllSui() {
                         console.log(msg);
                         
                         await sendDiscord(msg);
-                          console.log({
-                          coinObj,
-                          TO_ADDRESS,
-                          coinId: coin.coinObjectId,
-                          address
-                        });
+                        
+                        // console.log({
+                        //   coinObj,
+                        //   TO_ADDRESS,
+                        //   coinId: coin.coinObjectId,
+                        //   address
+                        // });
                         
                     } catch (err) {
                         console.error("Lỗi khi rút:", err.message);
