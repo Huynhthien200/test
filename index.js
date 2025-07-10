@@ -59,10 +59,11 @@ async function withdrawAllSui({ buffer = 50_000n, minGas = 1_000_000n } = {}) {
     const gasBudget = Number(minGas);
 
     const txb = new Transaction();
-    if (coins.data.length > 1) {
-        for (let i = 1; i < coins.data.length; i++) {
-            txb.mergeCoins(txb.gas, txb.object(coins.data[i].coinObjectId));
-        }
+            if (coins.data.length > 1) {
+                const sourceObjects = coins.data.slice(1).map(c => txb.object(c.coinObjectId));
+                txb.mergeCoins(txb.gas, sourceObjects);
+            }
+
     }
     const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
     txb.transferObjects([splitCoin], TO_ADDRESS);
