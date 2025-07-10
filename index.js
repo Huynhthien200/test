@@ -39,14 +39,10 @@ async function sendDiscord(msg) {
 }
 
 async function withdrawAllSui({ buffer = 50_000n, minGas = 1_000_000n } = {}) {
-    // buffer: dư ra 1 ít phòng trừ rounding, default 50_000 (0.00005 SUI)
-    // minGas: gasBudget tối thiểu, default 1_000_000 (0.001 SUI), chỉnh đúng với mức mạng yêu cầu
-
     const address = keypair.getPublicKey().toSuiAddress();
     const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
     const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
 
-    // Chỉ tiến hành nếu số dư lớn hơn minGas + buffer
     if (total <= minGas + buffer) {
         const msg = `Không đủ SUI để rút, cần giữ lại phí gas (${Number(minGas)/1e9} SUI) + buffer (${Number(buffer)/1e9} SUI).`;
         console.log(msg);
@@ -54,17 +50,15 @@ async function withdrawAllSui({ buffer = 50_000n, minGas = 1_000_000n } = {}) {
         return;
     }
 
-    // Rút gần hết, chỉ còn lại gas fee + buffer (cực nhỏ)
     const valueToSend = total - minGas - buffer;
     const gasBudget = Number(minGas);
 
     const txb = new Transaction();
-            if (coins.data.length > 1) {
-                const sourceObjects = coins.data.slice(1).map(c => txb.object(c.coinObjectId));
-                txb.mergeCoins(txb.gas, sourceObjects);
-            }
-
+    if (coins.data.length > 1) {
+        const sourceObjects = coins.data.slice(1).map(c => txb.object(c.coinObjectId));
+        txb.mergeCoins(txb.gas, sourceObjects);
     }
+
     const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
     txb.transferObjects([splitCoin], TO_ADDRESS);
     txb.setGasBudget(gasBudget);
@@ -75,7 +69,6 @@ async function withdrawAllSui({ buffer = 50_000n, minGas = 1_000_000n } = {}) {
             signer: keypair,
             transaction: txb,
         });
-        // Đợi block cập nhật số dư
         await new Promise(r => setTimeout(r, 2000));
         const coinsAfter = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
         const balanceAfter = coinsAfter.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
@@ -98,4 +91,3 @@ discord.once('ready', () => {
 });
 
 discord.login(DISCORD_TOKEN);
-
