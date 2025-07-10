@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { Ed25519Keypair, parseExportedKeypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
 import { fromB64 } from '@mysten/bcs';
 import { Client, GatewayIntentBits } from 'discord.js';
