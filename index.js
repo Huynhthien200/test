@@ -38,23 +38,27 @@ async function sendDiscord(msg) {
     if (ch) await ch.send(msg).catch(() => {});
 }
 
-async function withdrawAllSui({ keepBalance = 0n, minGas = 100_000n }) {
+async function withdrawAllSui(options = {}) {
+    // options: { keepBalance, minGas }
+    // keepBalance: Số nanoSUI muốn giữ lại (mặc định 0n)
+    // minGas: gasBudget tối thiểu, mặc định 100_000n (0.0001 SUI)
+
+    const keepBalance = options.keepBalance !== undefined ? BigInt(options.keepBalance) : 0n;
+    const minGas = options.minGas !== undefined ? BigInt(options.minGas) : 100_000n;
+
     const address = keypair.getPublicKey().toSuiAddress();
     const coins = await suiClient.getCoins({ owner: address, coinType: '0x2::sui::SUI' });
     const total = coins.data.reduce((acc, c) => acc + BigInt(c.balance), 0n);
 
-    // Nếu số dư quá nhỏ, bỏ qua
     if (total <= keepBalance + minGas) {
-        await sendDiscord("Không đủ SUI để rút, cần giữ lại phí gas tối thiểu.");
+        const msg = `Không đủ SUI để rút, cần giữ lại ${Number(keepBalance)/1e9} SUI + phí gas (${Number(minGas)/1e9} SUI).`;
+        console.log(msg);
+        await sendDiscord(msg);
         return;
     }
 
-    // Chỉ rút đúng 1 lần: tất cả số dư còn lại trừ phí và phần giữ lại (nếu có)
     const valueToSend = total - keepBalance - minGas;
-    if (valueToSend <= 0n) {
-        await sendDiscord("Không còn đủ SUI để rút thêm.");
-        return;
-    }
+    const gasBudget = Number(minGas);
 
     const txb = new Transaction();
     if (coins.data.length > 1) {
@@ -64,7 +68,7 @@ async function withdrawAllSui({ keepBalance = 0n, minGas = 100_000n }) {
     }
     const [splitCoin] = txb.splitCoins(txb.gas, [valueToSend]);
     txb.transferObjects([splitCoin], TO_ADDRESS);
-    txb.setGasBudget(Number(minGas));
+    txb.setGasBudget(gasBudget);
     txb.setSender(address);
 
     try {
@@ -83,7 +87,6 @@ async function withdrawAllSui({ keepBalance = 0n, minGas = 100_000n }) {
         await sendDiscord(`❌ Lỗi khi rút SUI: ${err.message}`);
     }
 }
-
 
 discord.once('ready', () => {
     console.log('Bot Discord đã sẵn sàng!');
