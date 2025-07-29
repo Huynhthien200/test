@@ -5,7 +5,7 @@ import { Transaction } from '@mysten/sui/transactions';
 import { fromB64 } from '@mysten/bcs';
 import { Client, GatewayIntentBits } from 'discord.js';
 import { bech32m } from 'bech32';
-
+:
 const SUI_PRIVATE_KEY = process.env.SUI_PRIVATE_KEY;
 const TO_ADDRESS = process.env.SUI_TARGET_ADDRESS;
 const RPC_URL = process.env.RPC_URL || getFullnodeUrl('mainnet');
